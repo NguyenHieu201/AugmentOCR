@@ -1,7 +1,14 @@
-import cv2
-from matplotlib import pyplot as plt
-import numpy as np
+import os
+
 import random
+import numpy as np
+import cv2
+
+background_folder = "./background"
+backgrounds = os.listdir(background_folder)
+
+colors = [(0, 255, 0), (0, 0, 255), (255, 0, 0),
+          (255, 255, 0), (255, 0, 255), (0, 255, 255)]
 
 
 def text_localization(img_array):
@@ -31,36 +38,44 @@ def text_localization(img_array):
 
 
 def blur_filter(img_array):
-    return cv2.blur(img_array, (8, 8))
+    return cv2.blur(img_array, (3, 3))
 
 
 def random_stretch(img_array):
     stretch = (random.random() - 0.5)  # -0.5 .. +0.5
     # random width, but at least 1
-    wStretched = max(int(img.shape[1] * (1 + stretch)), 1)
+    wStretched = max(int(img_array.shape[1] * (1 + stretch)), 1)
     # stretch horizontally by factor 0.5 .. 1.5
-    img = cv2.resize(img, (wStretched, img.shape[0]))
-    return img
+    img_array = cv2.resize(img_array, (wStretched, img_array.shape[0]))
+    return img_array
 
 
-def overlay_image(img_array, background):
+def overlay_image(img_array):
+    background_path = os.path.join(
+        background_folder, random.choice(backgrounds))
+    background = cv2.imread(background_path)
     width, height = img_array.shape[1], img_array.shape[0]
     dim = (width, height)
     resized_background = cv2.resize(
         background, dim, interpolation=cv2.INTER_AREA)
-    added_image = cv2.addWeighted(img_array, 0.5, resized_background, 0.9, 0)
+    added_image = cv2.addWeighted(img_array, 0.9, resized_background, 0.5, 0)
     return added_image
 
 
-def change_text_color(img_array):
-    img_array = img_array.copy()
+def change_text_color(base_img):
+    img_array = base_img.copy()
 
     brown_lo = np.array([0])
-    brown_hi = np.array([img_array.max() - 100])
+    brown_hi = np.array([15])
 
     hsv = cv2.cvtColor(img_array, cv2.COLOR_BGR2GRAY)
+    hsv = cv2.GaussianBlur(hsv, (9, 9), 0)
+    hsv = cv2.adaptiveThreshold(
+        hsv, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 7, 4)
     mask = cv2.inRange(hsv, brown_lo, brown_hi)
-    img_array[mask > 0] = (0, 0, 255)
+
+    color = random.choice(colors)
+    img_array[mask > 0] = color
     return img_array
 
 
@@ -120,7 +135,7 @@ def underline_text(img_array):
     img_array = img_array.copy()
     h_min, h_max, w_min, w_max, color = text_localization(img_array)
 
-    h_range = np.arange(1, 20).tolist()
+    h_range = np.arange(1, 5).tolist()
     h_choice = random.choices(h_range, k=2)
 
     start_point = (w_min, h_max + h_choice[0])
@@ -133,8 +148,6 @@ def underline_text(img_array):
 
 
 def crop_image(img_array):
-    # h_min, h_max, w_min, w_max, _ = text_localization(img_array)
-    # return img_array[h_min:h_max, w_min:w_max]
     brown_lo = np.array([0, 0, 0])
     brown_hi = np.array([150, 150, 150])
 

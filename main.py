@@ -1,36 +1,54 @@
 import os
+import argparse
 
 import cv2
-import matplotlib.pyplot as plt
-import pandas as pd
 
 from augment import *
 
+parser = argparse.ArgumentParser()
+parser.add_argument(
+    "--origin", default="./images-20221018T171551Z-001/images/")
+parser.add_argument("--result", default="./result")
+parser.add_argument("--gen", default=1)
 
-augment_folder = "./result/"
-original_folder = "./images-20221018T171551Z-001/images/"
-i = 0
+args = parser.parse_args()
+
+original_folder = args.origin
+result_folder = args.result
+n_image = int(args.gen)
+
+if not os.path.exists(result_folder):
+    os.makedirs(result_folder)
+
+augment_function_list = [change_text_color, underline_text, text_delete_line, blur_filter,
+                         random_stretch, distort, gaussian_noise, overlay_image]
+
+augment_prob = [1, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5]
 
 
-def crop_image(img_array):
-    h_min, h_max, w_min, w_max, _ = text_localization(img_array)
-    return img_array[h_min:h_max, w_min:w_max]
+def gen_image(image, augment_prob, augment_function_list, n_image,
+              base_name, result_folder):
+
+    def augment_ocr(image):
+        n_function = len(augment_function_list)
+        noise = image.copy()
+        for i in range(n_function):
+            prob_function = augment_prob[i]
+            is_apply_function = np.random.choice(
+                [0, 1], size=1, p=[1-prob_function, prob_function])
+            if is_apply_function == 1:
+                noise = augment_function_list[i](noise)
+        return noise
+
+    for i in range(n_image):
+        image_path = os.path.join(result_folder, f"{base_name}_{i}.jpg")
+        augment_image = augment_ocr(image)
+        cv2.imwrite(image_path, augment_image)
 
 
-for image in os.listdir(original_folder)[:1000]:
-    img = cv2.imread(os.path.join(original_folder, image))
-    crop_img = crop_image(img)
-    # cv2.imshow("HIEU", crop_img)
-    # cv2.waitKey(0)
-    # plt.imshow(crop_img)
-    # plt.show()
-    cv2.imwrite(os.path.join(augment_folder, f"{i}.png"), crop_img)
-    i += 1
-
-    # img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    # thresh = cv2.adaptiveThreshold(
-    #     img, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 7, 4)
-    # freq, value = np.histogram(thresh, bins=np.arange(256))
-    # plt.plot(freq)
-    # plt.show()
-    # pd.DataFrame(freq).to_csv("freq.csv")
+for image_file in os.listdir(original_folder):
+    image_path = os.path.join(original_folder, image_file)
+    img = cv2.imread(image_path)
+    gen_image(img, augment_prob, augment_function_list,
+              n_image=n_image, base_name=image_file,
+              result_folder=result_folder)
