@@ -37,7 +37,7 @@ def text_localization(img_array):
 
 
 def blur_filter(img_array):
-    return cv2.blur(img_array, (3, 3))
+    return cv2.blur(img_array, (5, 5))
 
 
 def random_stretch(img_array):
