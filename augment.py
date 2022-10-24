@@ -14,7 +14,6 @@ colors = [(0, 255, 0), (0, 0, 255), (255, 0, 0),
 def text_localization(img_array):
     width, height = img_array.shape[1], img_array.shape[0]
     brown_lo = np.array([0])
-    # brown_hi = np.array([img_array.max() - 90])
     brown_hi = np.array([150])
 
     hsv = cv2.cvtColor(img_array, cv2.COLOR_BGR2GRAY)
@@ -42,23 +41,50 @@ def blur_filter(img_array):
 
 
 def random_stretch(img_array):
-    stretch = (random.random() - 0.5)  # -0.5 .. +0.5
-    # random width, but at least 1
+    stretch = (random.random() - 0.5)
     wStretched = max(int(img_array.shape[1] * (1 + stretch)), 1)
-    # stretch horizontally by factor 0.5 .. 1.5
     img_array = cv2.resize(img_array, (wStretched, img_array.shape[0]))
     return img_array
 
 
 def overlay_image(img_array):
+    # shape of original image
+    width, height = img_array.shape[1], img_array.shape[0]
+    # random choice background from folder
     background_path = os.path.join(
         background_folder, random.choice(backgrounds))
     background = cv2.imread(background_path)
-    width, height = img_array.shape[1], img_array.shape[0]
-    dim = (width, height)
+
+    # create white background
+    final_background = np.full((height, width, 3), 255).astype(np.uint8)
+
+    # determine position of background
+    h_value = random.sample(range(height), k=2)
+    w_value = random.sample(range(width), k=2)
+
+    min_h, max_h = min(h_value), max(h_value)
+    min_w, max_w = min(w_value), max(w_value)
+
+    # overlay background to base image
+    resized_dim = (max_w - min_w, max_h - min_h)
     resized_background = cv2.resize(
-        background, dim, interpolation=cv2.INTER_AREA)
-    added_image = cv2.addWeighted(img_array, 0.9, resized_background, 0.5, 0)
+        background, resized_dim, interpolation=cv2.INTER_AREA)
+
+    resized_background = resized_background.astype(np.uint16)
+    final_background = final_background.astype(np.uint16)
+    final_background[min_h:max_h, min_w:max_w] += resized_background
+
+    final_background[np.where(final_background == 255)] = 0
+    final_background[np.where(final_background > 255)] -= 255
+
+    # area not in background will be white
+    mask = np.full(shape=(height, width), fill_value=True)
+    mask[min_h:max_h, min_w:max_w] = False
+
+    final_background[mask] = (255, 255, 255)
+
+    final_background = final_background.astype(np.uint8)
+    added_image = cv2.addWeighted(img_array, 1, final_background, 0.2, 0)
     return added_image
 
 
@@ -118,7 +144,6 @@ def text_delete_line(img_array):
     h_min, h_max, w_min, w_max, color = text_localization(img_array)
 
     h_range = range(h_min, h_max+1)
-    w_range = range(w_min, w_max+1)
 
     h_choice = random.choices(h_range, k=2)
 
@@ -133,7 +158,7 @@ def text_delete_line(img_array):
 
 def underline_text(img_array):
     img_array = img_array.copy()
-    h_min, h_max, w_min, w_max, color = text_localization(img_array)
+    _, h_max, w_min, w_max, color = text_localization(img_array)
 
     h_range = np.arange(1, 5).tolist()
     h_choice = random.choices(h_range, k=2)
@@ -162,3 +187,15 @@ def crop_image(img_array):
     w_min = np.min(w)
     w_max = np.max(w)
     return img_array[h_min:h_max, w_min:w_max]
+
+
+augment_function_map = {
+    "color": change_text_color,
+    "underline": underline_text,
+    "delete": text_delete_line,
+    "blur": blur_filter,
+    "stretch": random_stretch,
+    "distort": distort,
+    "noise": gaussian_noise,
+    "bg": overlay_image
+}
