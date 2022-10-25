@@ -1,7 +1,7 @@
 # Augment for OCR data
 
 ## Argument
-
+Run `python main.py`
 - Add `--gen` argument to set the number of augment image for each original image
 - Add `--origin` argument to set the path of folder contain original images
 - Add `--result` argument to set the path of folder contain result images
