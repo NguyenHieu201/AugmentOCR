@@ -10,7 +10,7 @@ def text_localization(img_array):
     brown_hi = np.array([150])
 
     hsv = cv2.cvtColor(img_array, cv2.COLOR_BGR2GRAY)
-    kernel = np.ones((5, 5), np.uint8)
+    kernel = np.ones((3, 3), np.uint8)
     hsv = cv2.morphologyEx(hsv, cv2.MORPH_CLOSE, kernel)
     hsv = cv2.GaussianBlur(hsv, (9, 9), 0)
     hsv = cv2.adaptiveThreshold(
@@ -33,10 +33,11 @@ def text_localization(img_array):
     return img_array[h_min:h_max, w_min:w_max]
 
 
-original_folder = "./images-20221018T171551Z-001/images/"
-result_folder = "./test"
+# original_folder = "./images-20221018T171551Z-001/images/"
+original_folder = "./test"
+result_folder = "./only_text"
 
-images = os.listdir(original_folder)[:1000]
+images = os.listdir(original_folder)
 
 if not os.path.exists(result_folder):
     os.makedirs(result_folder)
