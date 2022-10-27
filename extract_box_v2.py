@@ -82,7 +82,7 @@ coordinate_list = [(82, 233), (161, 416),
 origin_folder = "./only_paper"
 result_folder = "./test"
 
-images = os.listdir(origin_folder)[:10]
+images = os.listdir(origin_folder)
 n_coordinate = int(len(coordinate_list) / 2)
 
 for image in images:
@@ -103,5 +103,4 @@ for image in images:
         img = cv2.rectangle(img, start_point, end_point,
                             color, thickness)
 
-    plt.imshow(img)
-    plt.show()
+    cv2.imwrite(os.path.join(result_folder, image), img)
